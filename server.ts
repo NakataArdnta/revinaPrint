@@ -6,7 +6,6 @@ import {
   PricingConfig,
   NotificationItem,
   AuditLogItem,
-  UserAccount,
   OrderStatus,
   PaymentStatus,
 } from "./src/types";
@@ -102,35 +101,6 @@ let orders: OrderItem[] = [
       { status: "SIAP_DIAMBIL", timestamp: new Date(Date.now() - 3600000 * 1).toISOString(), note: "Sudah selesai diprint & dijilid" },
     ],
   },
-  {
-    id: `RVP-${todayStr}-0003`,
-    createdAt: new Date(Date.now() - 3600000 * 0.8).toISOString(),
-    customerName: "Ahmad Dani",
-    whatsapp: "085711223344",
-    email: "ahmad.dani@gmail.com",
-    files: [
-      { id: "f-3", name: "Brosur_Promosi_Event.png", size: 1800000, type: "image/png", pageCountEstimate: 5 },
-    ],
-    paperType: "A4",
-    colorMode: "COLOR",
-    pageCount: 5,
-    copyCount: 10,
-    printMode: "SINGLE",
-    orientation: "LANDSCAPE",
-    finishing: "NONE",
-    additionalNotes: "Warna tajam, bahan hvs tebal.",
-    unitPrice: 2000,
-    subtotal: 100000,
-    finishingFee: 0,
-    customFeeAdjustment: 0,
-    grandTotal: 100000,
-    status: "MENUNGGU_PERSETUJUAN",
-    paymentStatus: "UNPAID",
-    estimatedCompletion: "Akan dikonfirmasi setelah ACC",
-    statusHistory: [
-      { status: "MENUNGGU_PERSETUJUAN", timestamp: new Date(Date.now() - 3600000 * 0.8).toISOString(), note: "Pesanan baru dikirim customer" },
-    ],
-  },
 ];
 
 let notifications: NotificationItem[] = [
@@ -143,17 +113,7 @@ let notifications: NotificationItem[] = [
     type: "INFO",
     createdAt: new Date(Date.now() - 3600000 * 0.5).toISOString(),
     read: false,
-  },
-  {
-    id: "notif-2",
-    orderId: `RVP-${todayStr}-0002`,
-    recipientWhatsapp: "089876543210",
-    title: "Pesanan Siap Diambil!",
-    message: "Pesanan #RVP-" + todayStr + "-0002 sudah selesai dicetak & dijilid. Anda dapat mengambilnya di toko.",
-    type: "SUCCESS",
-    createdAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-    read: true,
-  },
+  }
 ];
 
 let auditLogs: AuditLogItem[] = [
@@ -164,50 +124,7 @@ let auditLogs: AuditLogItem[] = [
     actorRole: "SUPER_ADMIN",
     action: "ACC_PESANAN",
     details: `Menyetujui pesanan RVP-${todayStr}-0001`,
-  },
-  {
-    id: "log-2",
-    timestamp: new Date(Date.now() - 3600000 * 0.5).toISOString(),
-    actorName: "Kasir Revina",
-    actorRole: "ADMIN",
-    action: "VERIFIKASI_PEMBAYARAN",
-    details: `Verifikasi pembayaran QRIS RVP-${todayStr}-0001 senilai Rp64.000`,
-  },
-];
-
-let users: UserAccount[] = [
-  {
-    id: "usr-admin-revina",
-    name: "Revina Admin",
-    whatsapp: "Revina",
-    email: "admin@revinaprint.com",
-    role: "SUPER_ADMIN",
-    createdAt: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "usr-admin",
-    name: "Admin Utama Revina",
-    whatsapp: "081122334455",
-    email: "admin@revinaprint.com",
-    role: "SUPER_ADMIN",
-    createdAt: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "usr-operator",
-    name: "Operator Percetakan",
-    whatsapp: "081122334466",
-    email: "operator@revinaprint.com",
-    role: "OPERATOR",
-    createdAt: "2026-01-01T00:00:00.000Z",
-  },
-  {
-    id: "usr-cust1",
-    name: "Budi Santoso",
-    whatsapp: "081234567890",
-    email: "budi@gmail.com",
-    role: "CUSTOMER",
-    createdAt: "2026-02-01T00:00:00.000Z",
-  },
+  }
 ];
 
 // Helper: Order ID Generator
@@ -218,7 +135,10 @@ function generateOrderId(): string {
   return `RVP-${dateStr}-${seq}`;
 }
 
+// ==========================================
 // API ROUTES
+// ==========================================
+
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", appName: "Revina Print API", timestamp: new Date().toISOString() });
 });
@@ -246,7 +166,7 @@ app.put("/api/config/pricing", (req, res) => {
 
 // Get orders with filters
 app.get("/api/orders", (req, res) => {
-  const { whatsapp, status, search, dateRange } = req.query;
+  const { whatsapp, status, search } = req.query;
 
   let result = [...orders];
 
@@ -269,9 +189,7 @@ app.get("/api/orders", (req, res) => {
     );
   }
 
-  // Sort newest first
   result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
   res.json(result);
 });
 
@@ -284,7 +202,7 @@ app.get("/api/orders/:id", (req, res) => {
   res.json(order);
 });
 
-// Create new order
+// Create new order (Guest Checkout)
 app.post("/api/orders", (req, res) => {
   try {
     const {
@@ -352,7 +270,6 @@ app.post("/api/orders", (req, res) => {
 
     orders.unshift(newOrder);
 
-    // Notification for customer
     notifications.unshift({
       id: "notif-" + Date.now(),
       orderId,
@@ -364,97 +281,41 @@ app.post("/api/orders", (req, res) => {
       read: false,
     });
 
-    // Audit log
     auditLogs.unshift({
       id: "log-" + Date.now(),
       timestamp: now,
       actorName: customerName,
       actorRole: "CUSTOMER",
       action: "BUAT_PESANAN",
-      details: `Membuat pesanan baru ${orderId} (${paperType} ${colorMode}, ${pageCount} lembar x ${copyCount} copy)`,
+      details: `Membuat pesanan baru ${orderId}`,
     });
 
     return res.status(201).json({ success: true, order: newOrder });
   } catch (err: any) {
     console.error("Error creating order:", err);
-    return res.status(500).json({ error: "Terjadi kesalahan server saat memproses pesanan: " + (err.message || "Unknown error") });
+    return res.status(500).json({ error: "Terjadi kesalahan server saat memproses pesanan." });
   }
 });
 
-// Update order status (ACC, Tolak, Progress update)
+// Update order status
 app.patch("/api/orders/:id/status", (req, res) => {
   const { id } = req.params;
   const { status, note, rejectionReason, updatedBy, estimatedCompletion } = req.body;
 
   const order = orders.find((o) => o.id === id);
-  if (!order) {
-    return res.status(404).json({ error: "Pesanan tidak ditemukan" });
-  }
+  if (!order) return res.status(404).json({ error: "Pesanan tidak ditemukan" });
 
   const now = new Date().toISOString();
   order.status = status as OrderStatus;
 
-  if (estimatedCompletion) {
-    order.estimatedCompletion = estimatedCompletion;
-  }
-
-  if (status === "DITOLAK") {
-    order.rejectionReason = rejectionReason || "Dokumen tidak memenuhi syarat cetak.";
-  }
+  if (estimatedCompletion) order.estimatedCompletion = estimatedCompletion;
+  if (status === "DITOLAK") order.rejectionReason = rejectionReason || "Dokumen tidak memenuhi syarat cetak.";
 
   order.statusHistory.unshift({
     status: status as OrderStatus,
     timestamp: now,
-    note: note || (status === "DITOLAK" ? rejectionReason : `Status diubah ke ${status}`),
+    note: note || `Status diubah ke ${status}`,
     updatedBy: updatedBy || "Admin",
-  });
-
-  // Add Notification
-  let notifType: "INFO" | "SUCCESS" | "WARNING" | "DANGER" = "INFO";
-  let title = `Pembaruan Pesanan #${id}`;
-  let message = `Status pesanan Anda kini: ${status}`;
-
-  if (status === "MENUNGGU_PEMBAYARAN") {
-    notifType = "SUCCESS";
-    title = "Pesanan Disetujui (ACC)";
-    message = `Pesanan #${id} telah di-ACC. Silakan upload bukti pembayaran di halaman status.`;
-  } else if (status === "DITOLAK") {
-    notifType = "DANGER";
-    title = "Pesanan Ditolak";
-    message = `Pesanan #${id} ditolak dengan alasan: ${order.rejectionReason}`;
-  } else if (status === "SEDANG_DICETAK") {
-    notifType = "INFO";
-    title = "Sedang Dicetak";
-    message = `Dokumen pesanan #${id} sedang dalam proses cetak & finishing. Est. selesai: ${order.estimatedCompletion}`;
-  } else if (status === "SIAP_DIAMBIL") {
-    notifType = "SUCCESS";
-    title = "Siap Diambil!";
-    message = `Pesanan #${id} telah selesai dicetak dan siap diambil di toko.`;
-  } else if (status === "SELESAI") {
-    notifType = "SUCCESS";
-    title = "Pesanan Selesai";
-    message = `Terima kasih! Pesanan #${id} telah diselesaikan.`;
-  }
-
-  notifications.unshift({
-    id: "notif-" + Date.now(),
-    orderId: id,
-    recipientWhatsapp: order.whatsapp,
-    title,
-    message,
-    type: notifType,
-    createdAt: now,
-    read: false,
-  });
-
-  // Audit log
-  auditLogs.unshift({
-    id: "log-" + Date.now(),
-    timestamp: now,
-    actorName: updatedBy || "Admin",
-    actorRole: "ADMIN",
-    action: "UBAH_STATUS_PESANAN",
-    details: `Ubah status ${id} menjadi ${status}`,
   });
 
   res.json({ success: true, order });
@@ -466,22 +327,11 @@ app.patch("/api/orders/:id/fee", (req, res) => {
   const { customFeeAdjustment, customFeeNote, updatedBy } = req.body;
 
   const order = orders.find((o) => o.id === id);
-  if (!order) {
-    return res.status(404).json({ error: "Pesanan tidak ditemukan" });
-  }
+  if (!order) return res.status(404).json({ error: "Pesanan tidak ditemukan" });
 
   order.customFeeAdjustment = Number(customFeeAdjustment) || 0;
   order.customFeeNote = customFeeNote || undefined;
   order.grandTotal = Math.max(0, order.subtotal + order.finishingFee + order.customFeeAdjustment);
-
-  auditLogs.unshift({
-    id: "log-" + Date.now(),
-    timestamp: new Date().toISOString(),
-    actorName: updatedBy || "Admin",
-    actorRole: "ADMIN",
-    action: "PENYESUAIAN_BIAYA",
-    details: `Penyesuaian biaya pesanan ${id}: Rp${order.customFeeAdjustment} (${customFeeNote || "Tanpa catatan"})`,
-  });
 
   res.json({ success: true, order });
 });
@@ -492,24 +342,11 @@ app.post("/api/orders/:id/payment", (req, res) => {
   const { paymentMethod, paymentProofUrl } = req.body;
 
   const order = orders.find((o) => o.id === id);
-  if (!order) {
-    return res.status(404).json({ error: "Pesanan tidak ditemukan" });
-  }
+  if (!order) return res.status(404).json({ error: "Pesanan tidak ditemukan" });
 
   order.paymentMethod = paymentMethod;
-  order.paymentProofUrl = paymentProofUrl || "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=500&auto=format&fit=crop&q=60";
+  order.paymentProofUrl = paymentProofUrl;
   order.paymentStatus = "PENDING_VERIFICATION";
-
-  notifications.unshift({
-    id: "notif-" + Date.now(),
-    orderId: id,
-    recipientWhatsapp: order.whatsapp,
-    title: "Bukti Pembayaran Diupload",
-    message: `Bukti pembayaran untuk #${id} berhasil diupload. Admin akan memverifikasi secepatnya.`,
-    type: "INFO",
-    createdAt: new Date().toISOString(),
-    read: false,
-  });
 
   res.json({ success: true, order });
 });
@@ -517,12 +354,10 @@ app.post("/api/orders/:id/payment", (req, res) => {
 // Verify/Reject Payment
 app.patch("/api/orders/:id/verify-payment", (req, res) => {
   const { id } = req.params;
-  const { action, note, updatedBy } = req.body; // action: 'APPROVE' | 'REJECT'
+  const { action, note, updatedBy } = req.body;
 
   const order = orders.find((o) => o.id === id);
-  if (!order) {
-    return res.status(404).json({ error: "Pesanan tidak ditemukan" });
-  }
+  if (!order) return res.status(404).json({ error: "Pesanan tidak ditemukan" });
 
   const now = new Date().toISOString();
 
@@ -535,39 +370,9 @@ app.patch("/api/orders/:id/verify-payment", (req, res) => {
       note: note || "Pembayaran diverifikasi oleh admin. Proses pencetakan dimulai.",
       updatedBy: updatedBy || "Admin",
     });
-
-    notifications.unshift({
-      id: "notif-" + Date.now(),
-      orderId: id,
-      recipientWhatsapp: order.whatsapp,
-      title: "Pembayaran Terverifikasi!",
-      message: `Pembayaran pesanan #${id} telah diverifikasi. Dokumen Anda sedang dicetak.`,
-      type: "SUCCESS",
-      createdAt: now,
-      read: false,
-    });
   } else {
     order.paymentStatus = "REJECTED";
-    notifications.unshift({
-      id: "notif-" + Date.now(),
-      orderId: id,
-      recipientWhatsapp: order.whatsapp,
-      title: "Pembayaran Ditolak",
-      message: `Bukti pembayaran pesanan #${id} tidak valid. Catatan: ${note || "Silakan re-upload bukti transfer yang jelas."}`,
-      type: "DANGER",
-      createdAt: now,
-      read: false,
-    });
   }
-
-  auditLogs.unshift({
-    id: "log-" + Date.now(),
-    timestamp: now,
-    actorName: updatedBy || "Admin",
-    actorRole: "ADMIN",
-    action: action === "APPROVE" ? "VERIFIKASI_PEMBAYARAN_ACC" : "VERIFIKASI_PEMBAYARAN_TOLAK",
-    details: `${action === "APPROVE" ? "Verifikasi ACC" : "Verifikasi Tolak"} pembayaran pesanan ${id}`,
-  });
 
   res.json({ success: true, order });
 });
@@ -576,22 +381,12 @@ app.patch("/api/orders/:id/verify-payment", (req, res) => {
 app.delete("/api/orders/:id", (req, res) => {
   const { id } = req.params;
   const index = orders.findIndex((o) => o.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Pesanan tidak ditemukan" });
-  }
-  const deleted = orders.splice(index, 1)[0];
-  auditLogs.unshift({
-    id: "log-" + Date.now(),
-    timestamp: new Date().toISOString(),
-    actorName: "Admin/System",
-    actorRole: "ADMIN",
-    action: "HAPUS_PESANAN",
-    details: `Menghapus pesanan #${id} (${deleted.customerName})`,
-  });
+  if (index === -1) return res.status(404).json({ error: "Pesanan tidak ditemukan" });
+  orders.splice(index, 1);
   res.json({ success: true, deletedId: id });
 });
 
-// Clear orders history (by whatsapp or status)
+// Clear orders history
 app.delete("/api/orders", (req, res) => {
   const { whatsapp, status } = req.query;
   let removedCount = 0;
@@ -600,30 +395,13 @@ app.delete("/api/orders", (req, res) => {
     const waClean = String(whatsapp).replace(/\D/g, "");
     orders = orders.filter((o) => {
       const match = o.whatsapp.replace(/\D/g, "") === waClean;
-      if (status) {
-        if (match && o.status === status) {
-          removedCount++;
-          return false;
-        }
-        return true;
-      } else {
-        if (match) {
-          removedCount++;
-          return false;
-        }
-        return true;
-      }
-    });
-  } else if (status) {
-    orders = orders.filter((o) => {
-      if (o.status === status) {
+      if (match && (!status || o.status === status)) {
         removedCount++;
         return false;
       }
       return true;
     });
   } else {
-    // Clear all completed/cancelled orders
     orders = orders.filter((o) => {
       if (["SELESAI", "DIBATALKAN"].includes(o.status)) {
         removedCount++;
@@ -641,59 +419,24 @@ app.get("/api/notifications", (req, res) => {
   const { whatsapp } = req.query;
   let result = [...notifications];
   if (whatsapp) {
-    result = result.filter((n) => n.recipientWhatsapp === String(whatsapp) || n.recipientWhatsapp.replace(/\D/g, "") === String(whatsapp).replace(/\D/g, ""));
+    result = result.filter((n) => n.recipientWhatsapp.replace(/\D/g, "") === String(whatsapp).replace(/\D/g, ""));
   }
   res.json(result);
 });
 
 app.patch("/api/notifications/:id/read", (req, res) => {
   const notif = notifications.find((n) => n.id === req.params.id);
-  if (notif) {
-    notif.read = true;
-  }
+  if (notif) notif.read = true;
   res.json({ success: true });
 });
 
 // Admin Analytics & Reports API
 app.get("/api/reports", (_req, res) => {
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter((o) => o.status === "SELESAI").length;
-  const processingOrders = orders.filter((o) => ["MENUNGGU_PERSETUJUAN", "MENUNGGU_PEMBAYARAN", "SEDANG_DICETAK"].includes(o.status)).length;
-
-  const totalRevenue = orders
-    .filter((o) => o.paymentStatus === "VERIFIED")
-    .reduce((sum, o) => sum + o.grandTotal, 0);
-
-  const todayDateStr = new Date().toISOString().split("T")[0];
-  const todayOrders = orders.filter((o) => o.createdAt.startsWith(todayDateStr)).length;
-
-  // Revenue chart data (mock 7 days breakdown)
-  const revenueChart = [
-    { day: "Senin", total: 180000, count: 4 },
-    { day: "Selasa", total: 240000, count: 6 },
-    { day: "Rabu", total: 310000, count: 8 },
-    { day: "Kamis", total: 290000, count: 7 },
-    { day: "Jumat", total: 420000, count: 11 },
-    { day: "Sabtu", total: 550000, count: 14 },
-    { day: "Minggu", total: 380000, count: 9 },
-  ];
-
-  // Top paper types
-  const paperStats = {
-    A4_BW: orders.filter((o) => o.paperType === "A4" && o.colorMode === "BW").length,
-    A4_COLOR: orders.filter((o) => o.paperType === "A4" && o.colorMode === "COLOR").length,
-    F4_BW: orders.filter((o) => o.paperType === "F4" && o.colorMode === "BW").length,
-    F4_COLOR: orders.filter((o) => o.paperType === "F4" && o.colorMode === "COLOR").length,
-  };
-
   res.json({
-    totalOrders,
-    completedOrders,
-    processingOrders,
-    totalRevenue,
-    todayOrders,
-    revenueChart,
-    paperStats,
+    totalOrders: orders.length,
+    completedOrders: orders.filter((o) => o.status === "SELESAI").length,
+    processingOrders: orders.filter((o) => ["MENUNGGU_PERSETUJUAN", "MENUNGGU_PEMBAYARAN", "SEDANG_DICETAK"].includes(o.status)).length,
+    totalRevenue: orders.filter((o) => o.paymentStatus === "VERIFIED").reduce((sum, o) => sum + o.grandTotal, 0),
   });
 });
 
@@ -702,7 +445,7 @@ app.get("/api/audit-logs", (_req, res) => {
   res.json(auditLogs);
 });
 
-// Admin password verification endpoint
+// Admin password verification endpoint (Satu-satunya gerbang keamanan untuk Admin)
 app.post("/api/admin/verify", (req, res) => {
   const { password } = req.body;
   if (password === "revinanakata") {
@@ -711,13 +454,13 @@ app.post("/api/admin/verify", (req, res) => {
   return res.status(401).json({ success: false, error: "Sandi Admin salah." });
 });
 
-// Global error handler for Express
+// Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("Server Error:", err);
-  res.status(500).json({ error: err.message || "Terjadi kesalahan internal pada server." });
+  res.status(500).json({ error: "Terjadi kesalahan internal pada server." });
 });
 
-// Serve frontend with Vite in dev mode or static files in production
+// Serve frontend
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
