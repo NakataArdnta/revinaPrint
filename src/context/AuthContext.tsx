@@ -45,29 +45,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const login = async (identifier: string, password?: string, role: UserRole = 'CUSTOMER'): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // PERBAIKAN: Ubah 'identifier' menjadi 'inputAccount' agar cocok dengan server.ts
-        body: JSON.stringify({ inputAccount: identifier, password, role }),
-      });
-      if (!res.ok) return false;
-      const data = await res.json();
-      setUser(data.user);
-      if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'ADMIN' || data.user.role === 'OPERATOR') {
-        setActiveRoleView('ADMIN');
-        localStorage.setItem('revina_role_view', 'ADMIN');
-      } else {
-        setActiveRoleView('CUSTOMER');
-        localStorage.setItem('revina_role_view', 'CUSTOMER');
-      }
-      return true;
-    } catch (e) {
+  const login = async (
+  identifier: string,
+  password?: string,
+  role: UserRole = "CUSTOMER"
+): Promise<boolean> => {
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputAccount: identifier.trim(),
+        password: password?.trim(),
+        role,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error(data);
       return false;
     }
-  };
+
+    setUser(data.user);
+
+    if (
+      ["SUPER_ADMIN", "ADMIN", "OPERATOR"].includes(data.user.role)
+    ) {
+      setActiveRoleView("ADMIN");
+      localStorage.setItem("revina_role_view", "ADMIN");
+    } else {
+      setActiveRoleView("CUSTOMER");
+      localStorage.setItem("revina_role_view", "CUSTOMER");
+    }
+
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+};
 
   const register = async (username: string, email: string, password?: string): Promise<boolean> => {
     try {
