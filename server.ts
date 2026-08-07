@@ -1,11 +1,9 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-<<<<<<< HEAD
 =======
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
 import {
   OrderItem,
   PricingConfig,
@@ -29,7 +27,6 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
 
-<<<<<<< HEAD
 // Connect to MongoDB Atlas
 app.use(async (_req, _res, next) => {
   try {
@@ -223,7 +220,6 @@ let users: UserAccount[] = [
 
 // Helper: Order ID Generator
 function generateOrderId(): string {
-=======
 // ==========================================
 // 1. KONEKSI MONGODB ATLAS
 // ==========================================
@@ -297,7 +293,6 @@ const transporter = nodemailer.createTransport({
 });
 
 function generateOrderId(orderCount: number): string {
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
   const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
   const seq = (orderCount + 1).toString().padStart(4, "0");
   return `RVP-${dateStr}-${seq}`;
@@ -308,7 +303,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", appName: "Revina Print API", timestamp: new Date().toISOString() });
 });
 
-<<<<<<< HEAD
 // Pricing config
 app.get("/api/config/pricing", (_req, res) => {
   res.json(pricingConfig);
@@ -808,7 +802,6 @@ app.post("/api/auth/login", async (req, res) => {
         email: "admin@revinaprint.com",
         role: "SUPER_ADMIN",
       },
-=======
 app.post("/api/orders", async (req, res) => {
   try {
     const { customerName, whatsapp, email, files, paperType, colorMode, pageCount, copyCount, printMode, orientation, finishing, additionalNotes } = req.body;
@@ -829,7 +822,6 @@ app.post("/api/orders", async (req, res) => {
     const newOrder = new OrderModel({
       id: orderId, createdAt: now, customerName, whatsapp, email, files: files || [], paperType, colorMode, pageCount: Number(pageCount), copyCount: Number(copyCount), printMode: printMode || "SINGLE", orientation: orientation || "PORTRAIT", finishing: finishing || "NONE", additionalNotes, unitPrice: calculation.unitPrice, subtotal: calculation.subtotal, finishingFee: calculation.finishingFee, customFeeAdjustment: 0, grandTotal: calculation.grandTotal, status: "MENUNGGU_PERSETUJUAN", paymentStatus: "UNPAID", estimatedCompletion: "Akan dikonfirmasi oleh Admin",
       statusHistory: [{ status: "MENUNGGU_PERSETUJUAN", timestamp: now, note: "Pesanan berhasil dikirim ke sistem." }],
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
     });
 
     await newOrder.save();
@@ -839,7 +831,6 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
   // Customer login from MongoDB Atlas
   try {
     const foundUser = await User.findOne({
@@ -946,7 +937,6 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 // Serve frontend with Vite in dev mode or static files in production
-=======
 app.patch("/api/orders/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
@@ -1124,7 +1114,6 @@ app.post("/api/auth/reset-password", async (req, res) => {
 // ==========================================
 // 7. SERVE FRONTEND (VITE & STATIC)
 // ==========================================
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -1135,13 +1124,10 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-<<<<<<< HEAD
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
-=======
     app.get("*", (_req, res) => res.sendFile(path.join(distPath, "index.html")));
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
   }
 
   app.listen(PORT, "0.0.0.0", () => {
@@ -1149,7 +1135,6 @@ async function startServer() {
   });
 }
 
-<<<<<<< HEAD
 if (process.env.VERCEL !== "1") {
   startServer();
 }
@@ -1157,4 +1142,3 @@ if (process.env.VERCEL !== "1") {
 export default app;
 =======
 startServer();
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
