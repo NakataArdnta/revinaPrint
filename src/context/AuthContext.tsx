@@ -4,8 +4,8 @@ import { UserAccount, UserRole } from '../types';
 interface AuthContextType {
   user: UserAccount | null;
   activeRoleView: 'CUSTOMER' | 'ADMIN';
-  login: (identifier: string, password?: string, role?: UserRole) => Promise<boolean>;
-  register: (username: string, email: string, password?: string) => Promise<boolean>;
+  login: (account: string, password?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, whatsapp?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   switchRoleView: (view: 'CUSTOMER' | 'ADMIN') => void;
   updateProfile: (data: Partial<UserAccount>) => void;
@@ -45,6 +45,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+<<<<<<< HEAD
+  const login = async (account: string, password?: string, role: UserRole = 'CUSTOMER'): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account, email: account, whatsapp: account, password, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Gagal masuk. Periksa kembali kredensial Anda.' };
+      }
+      setUser(data.user);
+      if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'ADMIN' || data.user.role === 'OPERATOR') {
+        setActiveRoleView('ADMIN');
+        localStorage.setItem('revina_role_view', 'ADMIN');
+      } else {
+        setActiveRoleView('CUSTOMER');
+        localStorage.setItem('revina_role_view', 'CUSTOMER');
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: 'Terjadi kesalahan koneksi ke server.' };
+=======
   const login = async (
   identifier: string,
   password?: string,
@@ -68,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!res.ok) {
       console.error(data);
       return false;
+>>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
     }
 
     setUser(data.user);
@@ -89,21 +114,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 };
 
-  const register = async (username: string, email: string, password?: string): Promise<boolean> => {
+  const register = async (name: string, email: string, password: string, whatsapp?: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ name, email, password, whatsapp }),
       });
-      if (!res.ok) return false;
       const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Gagal melakukan pendaftaran.' };
+      }
       setUser(data.user);
       setActiveRoleView('CUSTOMER');
       localStorage.setItem('revina_role_view', 'CUSTOMER');
-      return true;
+      return { success: true };
     } catch (e) {
-      return false;
+      return { success: false, error: 'Terjadi kesalahan koneksi ke server.' };
     }
   };
 

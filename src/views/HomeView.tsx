@@ -44,11 +44,11 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     },
     {
       q: 'Bagaimana sistem pembayaran di Revina Print?',
-      a: 'Kami menerima pembayaran melalui QRIS (Semua E-Wallet/m-Banking), Transfer Bank (BRI), maupun Cash di revina.',
+      a: 'Kami menerima pembayaran melalui QRIS (Semua E-Wallet/m-Banking), Transfer Bank (BCA, Mandiri, BRI), maupun Cash di toko.',
     },
     {
       q: 'Apakah bisa dikirim menggunakan kurir ke alamat saya?',
-      a: 'Tidak! hasil print wajib di ambil dari kosan.',
+      a: 'Bisa! Setelah status pesanan "Siap Diantar", kami dapat mengirimkan hasil cetakan via kurir online langsung ke alamat Anda.',
     },
     {
       q: 'Bagaimana jika terdapat kesalahan atau cacat cetak?',
