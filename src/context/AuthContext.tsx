@@ -45,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-<<<<<<< HEAD
   const login = async (account: string, password?: string, role: UserRole = 'CUSTOMER'): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/auth/login', {
@@ -68,7 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } catch (e) {
       return { success: false, error: 'Terjadi kesalahan koneksi ke server.' };
-=======
   const login = async (
   identifier: string,
   password?: string,
@@ -92,7 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!res.ok) {
       console.error(data);
       return false;
->>>>>>> 37f196d423c8981e7ed414b52223486be6df54e4
     }
 
     setUser(data.user);
