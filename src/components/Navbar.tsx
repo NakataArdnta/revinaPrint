@@ -1,47 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Printer, Sun, Moon, Bell, User, Shield, CheckCircle2, ChevronDown, Menu, X, FileText, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, Sun, Moon, Shield, Lock, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { fetchNotifications, markNotificationRead } from '../lib/api';
-import { NotificationItem } from '../types';
 
 interface NavbarProps {
   currentTab: string;
   onNavigate: (tab: string) => void;
-  onOpenAuth: () => void;
-  onOpenProfile: () => void;
+  onOpenAdminAuth: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAuth, onOpenProfile }) => {
-  const { user, activeRoleView, switchRoleView, logout } = useAuth();
+export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAdminAuth }) => {
+  const { isAdminAuthenticated, activeRoleView, switchRoleView, logoutAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
-
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const loadNotifs = async () => {
-    if (user?.whatsapp) {
-      const data = await fetchNotifications(user.whatsapp);
-      setNotifications(data);
+  const handleAdminClick = () => {
+    if (!isAdminAuthenticated) {
+      onOpenAdminAuth();
+    } else {
+      switchRoleView('ADMIN');
+      onNavigate('admin-dashboard');
     }
   };
-
-  useEffect(() => {
-    loadNotifs();
-    const interval = setInterval(loadNotifs, 10000); // Polling every 10s
-    return () => clearInterval(interval);
-  }, [user]);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const handleRead = async (id: string) => {
-    await markNotificationRead(id);
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
-
-  const isAdmin = !!user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'OPERATOR');
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
@@ -50,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
           {/* Logo Brand */}
           <button
             onClick={() => {
-              onNavigate(isAdmin && activeRoleView === 'ADMIN' ? 'admin-dashboard' : 'home');
+              onNavigate(activeRoleView === 'ADMIN' ? 'admin-dashboard' : 'home');
               setIsMobileMenuOpen(false);
             }}
             className="flex items-center gap-2.5 text-left group focus:outline-none"
@@ -68,7 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 -mt-1 font-medium">
-                Jasa Print Dokumen Profesional
+                Jasa Print Dokumen Langsung
               </p>
             </div>
           </button>
@@ -81,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   onClick={() => onNavigate('home')}
                   className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     currentTab === 'home'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -91,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   onClick={() => onNavigate('price-list')}
                   className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     currentTab === 'price-list'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -101,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   onClick={() => onNavigate('order-form')}
                   className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     currentTab === 'order-form'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -111,17 +91,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   onClick={() => onNavigate('customer-dashboard')}
                   className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     currentTab === 'customer-dashboard' || currentTab === 'order-status'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  Dashboard Saya
+                  Riwayat Cetak
                 </button>
               </>
             ) : (
               <button
                 onClick={() => onNavigate('admin-dashboard')}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white shadow-sm"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white shadow-xs"
               >
                 <Shield className="w-4 h-4" />
                 Panel Admin
@@ -129,41 +109,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
             )}
           </nav>
 
-          {/* Right Action Icons & Role Switcher */}
+          {/* Right Action Icons & Admin Toggle */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Role View Toggle Switcher (Shown ONLY to Admin accounts) */}
-            {isAdmin && (
-              <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                <button
-                  onClick={() => {
-                    switchRoleView('CUSTOMER');
-                    onNavigate('home');
-                  }}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
-                    activeRoleView === 'CUSTOMER'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  Mode Pelanggan
-                </button>
-                <button
-                  onClick={() => {
-                    switchRoleView('ADMIN');
-                    onNavigate('admin-dashboard');
-                  }}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
-                    activeRoleView === 'ADMIN'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  <Shield className="w-3 h-3" />
-                  Mode Admin
-                </button>
-              </div>
-            )}
-
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
@@ -173,124 +120,38 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
               {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
             </button>
 
-            {/* Notifications Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowNotifDropdown(!showNotifDropdown);
-                  setShowUserDropdown(false);
-                }}
-                className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
-                title="Notifikasi"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-
-              {showNotifDropdown && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 py-3 px-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-slate-100 dark:border-slate-700">
-                    <h4 className="font-semibold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Bell className="w-4 h-4 text-blue-500" />
-                      Notifikasi Pesanan
-                    </h4>
-                    <span className="text-xs text-slate-500 font-medium">{unreadCount} belum dibaca</span>
-                  </div>
-
-                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/50 mt-1">
-                    {notifications.length === 0 ? (
-                      <div className="py-8 text-center text-slate-400 text-xs">Belum ada notifikasi pesanan.</div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          onClick={() => {
-                            handleRead(n.id);
-                            onNavigate('order-status');
-                          }}
-                          className={`p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors ${
-                            !n.read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">{n.title}</span>
-                            <span className="text-[10px] text-slate-400">
-                              {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">{n.message}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* User Profile / Auth Button */}
-            {user ? (
-              <div className="relative">
+            {/* Admin Password Mode Button */}
+            {isAdminAuthenticated ? (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
                 <button
                   onClick={() => {
-                    setShowUserDropdown(!showUserDropdown);
-                    setShowNotifDropdown(false);
+                    switchRoleView(activeRoleView === 'ADMIN' ? 'CUSTOMER' : 'ADMIN');
+                    onNavigate(activeRoleView === 'ADMIN' ? 'home' : 'admin-dashboard');
                   }}
-                  className="flex items-center gap-2 p-1.5 pl-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    activeRoleView === 'ADMIN'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'
+                  }`}
                 >
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="hidden sm:inline font-medium text-xs text-slate-800 dark:text-slate-200 max-w-[100px] truncate">
-                    {user.name}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <Shield className="w-3.5 h-3.5" />
+                  {activeRoleView === 'ADMIN' ? 'Admin Active' : 'Mode Admin'}
                 </button>
-
-                {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-                      <p className="font-semibold text-xs text-slate-900 dark:text-white">{user.name}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{user.whatsapp}</p>
-                      <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
-                        {user.role}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        onOpenProfile();
-                        setShowUserDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2"
-                    >
-                      <User className="w-4 h-4 text-blue-500" />
-                      Edit Profil
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        logout();
-                        setShowUserDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700/50 mt-1"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Keluar (Logout)
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={logoutAdmin}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                  title="Keluar dari Akses Admin"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
             ) : (
               <button
-                onClick={onOpenAuth}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium text-xs shadow-md shadow-blue-500/20 hover:opacity-95 transition-all"
+                onClick={handleAdminClick}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all"
               >
-                <User className="w-3.5 h-3.5" />
-                Masuk / Daftar
+                <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Kategori Admin</span>
               </button>
             )}
 
@@ -344,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                 }}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                Dashboard Saya
+                Riwayat Cetak
               </button>
             </>
           ) : (
@@ -359,37 +220,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
             </button>
           )}
 
-          {isAdmin && (
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Tampilan Role:</span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => {
-                    switchRoleView('CUSTOMER');
-                    onNavigate('home');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`px-3 py-1 rounded text-xs font-bold ${
-                    activeRoleView === 'CUSTOMER' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                  }`}
-                >
-                  Customer
-                </button>
-                <button
-                  onClick={() => {
-                    switchRoleView('ADMIN');
-                    onNavigate('admin-dashboard');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`px-3 py-1 rounded text-xs font-bold ${
-                    activeRoleView === 'ADMIN' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                  }`}
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                handleAdminClick();
+              }}
+              className="w-full py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              {isAdminAuthenticated ? 'Buka Panel Admin' : 'Kategori Admin (Sandi: revinanakata)'}
+            </button>
+          </div>
         </div>
       )}
     </header>

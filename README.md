@@ -18,4 +18,3 @@ View your app in AI Studio: https://ai.studio/apps/039d6fc8-7d34-435c-b4ef-6cf6c
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
-"# RevinaWebsite" 
