@@ -45,33 +45,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const login = async (account: string, password?: string, role: UserRole = 'CUSTOMER'): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account, email: account, whatsapp: account, password, role }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        return { success: false, error: data.error || 'Gagal masuk. Periksa kembali kredensial Anda.' };
-      }
-      setUser(data.user);
-      if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'ADMIN' || data.user.role === 'OPERATOR') {
-        setActiveRoleView('ADMIN');
-        localStorage.setItem('revina_role_view', 'ADMIN');
-      } else {
-        setActiveRoleView('CUSTOMER');
-        localStorage.setItem('revina_role_view', 'CUSTOMER');
-      }
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: 'Terjadi kesalahan koneksi ke server.' };
   const login = async (
   identifier: string,
   password?: string,
   role: UserRole = "CUSTOMER"
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
   try {
     const res = await fetch("/api/auth/login", {
       method: "POST",
@@ -88,8 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const data = await res.json();
 
     if (!res.ok) {
-      console.error(data);
-      return false;
+      return {
+        success: false,
+        error: data.error || "Username atau password salah.",
+      };
     }
 
     setUser(data.user);
@@ -104,10 +84,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("revina_role_view", "CUSTOMER");
     }
 
-    return true;
+    return {
+      success: true,
+    };
   } catch (err) {
     console.error(err);
-    return false;
+
+    return {
+      success: false,
+      error: "Terjadi kesalahan koneksi ke server.",
+    };
   }
 };
 
