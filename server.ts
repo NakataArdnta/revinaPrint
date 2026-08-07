@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import {
   OrderItem,
   PricingConfig,
@@ -17,6 +16,18 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// Enable CORS for Vercel and multi-domain access
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Local Data Store in memory with initial sample data
 let pricingConfig: PricingConfig = { ...DEFAULT_PRICING };
@@ -700,9 +711,16 @@ app.post("/api/admin/verify", (req, res) => {
   return res.status(401).json({ success: false, error: "Sandi Admin salah." });
 });
 
+// Global error handler for Express
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Server Error:", err);
+  res.status(500).json({ error: err.message || "Terjadi kesalahan internal pada server." });
+});
+
 // Serve frontend with Vite in dev mode or static files in production
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -721,7 +739,7 @@ async function startServer() {
   });
 }
 
-if (process.env.VERCEL !== "1") {
+if (process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production") {
   startServer();
 }
 
