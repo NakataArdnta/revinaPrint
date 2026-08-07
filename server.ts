@@ -801,7 +801,8 @@ app.post("/api/auth/login", async (req, res) => {
         email: "admin@revinaprint.com",
         role: "SUPER_ADMIN",
       },
-    }
+    });
+  });
 app.post("/api/orders", async (req, res) => {
   try {
     const { customerName, whatsapp, email, files, paperType, colorMode, pageCount, copyCount, printMode, orientation, finishing, additionalNotes } = req.body;
