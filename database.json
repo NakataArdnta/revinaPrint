@@ -1,0 +1,43 @@
+{
+  "pricingConfig": {
+    "a4_bw": 500,
+    "a4_color": 2000,
+    "f4_bw": 700,
+    "f4_color": 2500,
+    "finishing_stapler": 1000,
+    "finishing_lakban": 3000,
+    "finishing_spiral": 8000,
+    "finishing_laminating": 5000
+  },
+  "orders": [],
+  "notifications": [],
+  "auditLogs": [],
+  "users": [
+    {
+      "id": "usr-1786065702273",
+      "name": "Nakata",
+      "whatsapp": "085748894171",
+      "email": "nakatatardinata@gmail.com",
+      "role": "CUSTOMER",
+      "createdAt": "2026-08-07T01:21:42.273Z"
+    },
+    {
+      "id": "usr-1786067624811",
+      "username": "Nakata",
+      "name": "Nakata",
+      "email": "valencianakata1447@gmail.com",
+      "password": "asdtaffu",
+      "role": "CUSTOMER",
+      "createdAt": "2026-08-07T01:53:44.811Z"
+    },
+    {
+      "id": "usr-1786067706039",
+      "username": "Nakata Z",
+      "name": "Nakata Z",
+      "email": "bustersmp123@gmail.com",
+      "password": "123",
+      "role": "CUSTOMER",
+      "createdAt": "2026-08-07T01:55:06.039Z"
+    }
+  ]
+}

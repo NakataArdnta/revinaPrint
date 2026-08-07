@@ -1,0 +1,135 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { UserAccount, UserRole } from '../types';
+
+interface AuthContextType {
+  user: UserAccount | null;
+  activeRoleView: 'CUSTOMER' | 'ADMIN';
+  login: (identifier: string, password?: string, role?: UserRole) => Promise<boolean>;
+  register: (username: string, email: string, password?: string) => Promise<boolean>;
+  logout: () => void;
+  switchRoleView: (view: 'CUSTOMER' | 'ADMIN') => void;
+  updateProfile: (data: Partial<UserAccount>) => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<UserAccount | null>(() => {
+    const saved = localStorage.getItem('revina_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { return null; }
+    }
+    return null;
+  });
+
+  const isAdminUser = (u: UserAccount | null) =>
+    !!u && (u.role === 'SUPER_ADMIN' || u.role === 'ADMIN' || u.role === 'OPERATOR');
+
+  const [activeRoleView, setActiveRoleView] = useState<'CUSTOMER' | 'ADMIN'>(() => {
+    const savedRole = localStorage.getItem('revina_role_view');
+    const savedUserStr = localStorage.getItem('revina_user');
+    if (savedRole === 'ADMIN' && savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        if (isAdminUser(u)) return 'ADMIN';
+      } catch (e) {}
+    }
+    return 'CUSTOMER';
+  });
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('revina_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('revina_user');
+    }
+  }, [user]);
+
+  const login = async (identifier: string, password?: string, role: UserRole = 'CUSTOMER'): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // PERBAIKAN: Ubah 'identifier' menjadi 'inputAccount' agar cocok dengan server.ts
+        body: JSON.stringify({ inputAccount: identifier, password, role }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      setUser(data.user);
+      if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'ADMIN' || data.user.role === 'OPERATOR') {
+        setActiveRoleView('ADMIN');
+        localStorage.setItem('revina_role_view', 'ADMIN');
+      } else {
+        setActiveRoleView('CUSTOMER');
+        localStorage.setItem('revina_role_view', 'CUSTOMER');
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const register = async (username: string, email: string, password?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      setUser(data.user);
+      setActiveRoleView('CUSTOMER');
+      localStorage.setItem('revina_role_view', 'CUSTOMER');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    setActiveRoleView('CUSTOMER');
+    localStorage.removeItem('revina_user');
+    localStorage.setItem('revina_role_view', 'CUSTOMER');
+  };
+
+  const switchRoleView = (view: 'CUSTOMER' | 'ADMIN') => {
+    if (view === 'ADMIN' && !isAdminUser(user)) {
+      setActiveRoleView('CUSTOMER');
+      localStorage.setItem('revina_role_view', 'CUSTOMER');
+      return;
+    }
+    setActiveRoleView(view);
+    localStorage.setItem('revina_role_view', view);
+  };
+
+  const updateProfile = (data: Partial<UserAccount>) => {
+    if (user) {
+      const updated = { ...user, ...data };
+      setUser(updated);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        activeRoleView,
+        login,
+        register,
+        logout,
+        switchRoleView,
+        updateProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+};
