@@ -775,13 +775,11 @@ app.get("/api/reports", (_req, res) => {
 app.get("/api/audit-logs", (_req, res) => {
   res.json(auditLogs);
 });
-
-// User Auth endpoints (MongoDB Atlas Integration)
 app.post("/api/auth/login", async (req, res) => {
   const { account, email, whatsapp, password, role } = req.body;
   const inputAccount = (account || email || whatsapp || "").trim().toLowerCase();
 
-  // Check for admin account (Revina / admin) or role ADMIN/SUPER_ADMIN
+  // 1. Check for admin account (Revina / admin) or role ADMIN/SUPER_ADMIN
   if (
     inputAccount === "revina" ||
     inputAccount === "admin" ||
@@ -801,9 +799,47 @@ app.post("/api/auth/login", async (req, res) => {
         email: "admin@revinaprint.com",
         role: "SUPER_ADMIN",
       },
-    })
+    });
+  } // <-- HAPUS }); YANG SEBELUMNYA ADA DI SINI
+
+  // 2. Customer login from MongoDB Atlas
+  try {
+    // Pastikan model User sudah di-import/didefinisikan di atas (atau ganti jadi UserModel jika itu nama variabelmu)
+    const foundUser = await User.findOne({
+      $or: [
+        { email: inputAccount },
+        { whatsapp: inputAccount },
+      ],
+    } as any);
+
+    if (foundUser) {
+      if (foundUser.password && password && foundUser.password !== password) {
+        return res.status(401).json({ error: "Password yang Anda masukkan salah" });
+      }
+
+      const userObj: UserAccount = {
+        id: foundUser._id.toString(),
+        name: foundUser.name,
+        email: foundUser.email,
+        whatsapp: foundUser.whatsapp || "",
+        role: (foundUser.role as any) || "CUSTOMER",
+        createdAt: foundUser.createdAt ? foundUser.createdAt.toISOString() : new Date().toISOString(),
+      };
+
+      return res.json({
+        token: "jwt-customer-token-" + foundUser._id,
+        user: userObj,
+      });
+    } else {
+      return res.status(401).json({ error: "Akun tidak ditemukan. Silakan daftar terlebih dahulu." });
+    }
+  } catch (err) {
+    console.warn("MongoDB auth lookup error:", err);
+    return res.status(500).json({ error: "Terjadi kesalahan pada server saat proses login." });
   }
-});
+}); // <-- FUNGSI LOGIN DITUTUP DI SINI
+
+
 app.post("/api/orders", async (req, res) => {
   try {
     const { customerName, whatsapp, email, files, paperType, colorMode, pageCount, copyCount, printMode, orientation, finishing, additionalNotes } = req.body;
@@ -832,38 +868,6 @@ app.post("/api/orders", async (req, res) => {
     res.status(500).json({ error: "Gagal menyimpan pesanan ke database" });
   }
 });
-
-  // Customer login from MongoDB Atlas
-  try {
-    const foundUser = await User.findOne({
-      $or: [
-        { email: inputAccount },
-        { whatsapp: inputAccount },
-      ],
-    } as any);
-
-    if (foundUser) {
-      if (foundUser.password && password && foundUser.password !== password) {
-        return res.status(401).json({ error: "Password yang Anda masukkan salah" });
-      }
-
-      const userObj: UserAccount = {
-        id: foundUser._id.toString(),
-        name: foundUser.name,
-        email: foundUser.email,
-        whatsapp: foundUser.whatsapp || "",
-        role: (foundUser.role as any) || "CUSTOMER",
-        createdAt: foundUser.createdAt ? foundUser.createdAt.toISOString() : new Date().toISOString(),
-      };
-
-      return res.json({
-        token: "jwt-customer-token-" + foundUser._id,
-        user: userObj,
-      });
-    }
-  } catch (err) {
-    console.warn("MongoDB auth lookup error:", err);
-  }
 
   // In-memory fallback
   const user = users.find((u) => u.whatsapp === inputAccount || u.email.toLowerCase() === inputAccount) || {
