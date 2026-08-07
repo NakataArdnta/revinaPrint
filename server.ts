@@ -200,45 +200,49 @@ app.post("/api/auth/register", async (req, res) => {
 // ==========================================
 // 5. ENDPOINT LOGIN
 // ==========================================
-app.post("/api/auth/login", async (req, res) => {
+const login = async (
+  identifier: string,
+  password?: string,
+  role: UserRole = "CUSTOMER"
+): Promise<boolean> => {
   try {
-    const { inputAccount, password } = req.body;
-
-    if (!inputAccount || !password) {
-      return res.status(400).json({ error: "Harap masukkan identitas akun dan password" });
-    }
-
-    // Logika Admin
-    const validAdmins = ["admin", "revina"];
-    if (validAdmins.includes(inputAccount)) {
-      if (password !== "admin") {
-        return res.status(401).json({ error: "Password admin salah" });
-      }
-      return res.json({
-        token: "jwt-admin-token-" + Date.now(),
-        user: { id: "admin-" + inputAccount, username: inputAccount, name: "Admin " + inputAccount, role: "SUPER_ADMIN" },
-      });
-    }
-
-    // Logika Customer (Cek ke MongoDB berdasarkan username atau email)
-    const user = await UserModel.findOne({ $or: [{ username: inputAccount }, { email: inputAccount }] });
-
-    if (!user) {
-      return res.status(401).json({ error: "Akun tidak ditemukan. Silakan daftar terlebih dahulu." });
-    }
-
-    if (user.password !== password) {
-      return res.status(401).json({ error: "Password salah." });
-    }
-
-    return res.json({
-      token: "jwt-customer-token-" + Date.now(),
-      user: { id: user.id, username: user.username, name: user.name, role: user.role },
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputAccount: identifier.trim(),
+        password: password?.trim(),
+        role,
+      }),
     });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error(data);
+      return false;
+    }
+
+    setUser(data.user);
+
+    if (
+      ["SUPER_ADMIN", "ADMIN", "OPERATOR"].includes(data.user.role)
+    ) {
+      setActiveRoleView("ADMIN");
+      localStorage.setItem("revina_role_view", "ADMIN");
+    } else {
+      setActiveRoleView("CUSTOMER");
+      localStorage.setItem("revina_role_view", "CUSTOMER");
+    }
+
+    return true;
   } catch (err) {
-    res.status(500).json({ error: "Terjadi kesalahan pada server saat login" });
+    console.error(err);
+    return false;
   }
-});
+};
 
 // ==========================================
 // 6. FITUR LUPA PASSWORD & OTP
