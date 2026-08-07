@@ -1,10 +1,28 @@
-import { OrderItem, PricingConfig, NotificationItem, AuditLogItem, UserAccount, OrderStatus } from '../types';
+import { OrderItem, PricingConfig, NotificationItem, AuditLogItem, OrderStatus } from '../types';
+
+async function safeFetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options);
+  const rawText = await res.text();
+  let data: any = {};
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch (e) {
+    if (!res.ok) {
+      throw new Error(`Gagal terhubung ke server (${res.status}). Silakan coba lagi.`);
+    }
+    throw new Error('Respon server tidak valid.');
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || data.message || `Terjadi kesalahan (${res.status})`);
+  }
+
+  return data as T;
+}
 
 export const fetchPricingConfig = async (): Promise<PricingConfig> => {
   try {
-    const res = await fetch('/api/config/pricing');
-    if (!res.ok) throw new Error('Failed to fetch pricing');
-    return await res.json();
+    return await safeFetchJson<PricingConfig>('/api/config/pricing');
   } catch (err) {
     console.warn('API fallback for pricing config');
     return {
@@ -21,12 +39,11 @@ export const fetchPricingConfig = async (): Promise<PricingConfig> => {
 };
 
 export const updatePricingConfig = async (config: Partial<PricingConfig>, updatedBy: string): Promise<PricingConfig> => {
-  const res = await fetch('/api/config/pricing', {
+  const data = await safeFetchJson<{ config: PricingConfig }>('/api/config/pricing', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...config, updatedBy }),
   });
-  const data = await res.json();
   return data.config;
 };
 
@@ -37,9 +54,7 @@ export const fetchOrders = async (params?: { whatsapp?: string; status?: string;
     if (params?.status) query.set('status', params.status);
     if (params?.search) query.set('search', params.search);
 
-    const res = await fetch(`/api/orders?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch orders');
-    return await res.json();
+    return await safeFetchJson<OrderItem[]>(`/api/orders?${query.toString()}`);
   } catch (err) {
     console.error('Error fetching orders:', err);
     return [];
@@ -48,25 +63,18 @@ export const fetchOrders = async (params?: { whatsapp?: string; status?: string;
 
 export const fetchOrderById = async (id: string): Promise<OrderItem | null> => {
   try {
-    const res = await fetch(`/api/orders/${id}`);
-    if (!res.ok) return null;
-    return await res.json();
+    return await safeFetchJson<OrderItem>(`/api/orders/${id}`);
   } catch (err) {
     return null;
   }
 };
 
 export const createOrder = async (orderData: any): Promise<OrderItem> => {
-  const res = await fetch('/api/orders', {
+  const data = await safeFetchJson<{ success: boolean; order: OrderItem }>('/api/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(orderData),
   });
-  if (!res.ok) {
-    const errData = await res.json();
-    throw new Error(errData.error || 'Gagal membuat pesanan');
-  }
-  const data = await res.json();
   return data.order;
 };
 
@@ -80,13 +88,11 @@ export const updateOrderStatus = async (
     estimatedCompletion?: string;
   }
 ): Promise<OrderItem> => {
-  const res = await fetch(`/api/orders/${id}/status`, {
+  const data = await safeFetchJson<{ order: OrderItem }>(`/api/orders/${id}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error('Gagal memperbarui status');
-  const data = await res.json();
   return data.order;
 };
 
@@ -96,13 +102,11 @@ export const updateOrderFee = async (
   customFeeNote?: string,
   updatedBy?: string
 ): Promise<OrderItem> => {
-  const res = await fetch(`/api/orders/${id}/fee`, {
+  const data = await safeFetchJson<{ order: OrderItem }>(`/api/orders/${id}/fee`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ customFeeAdjustment, customFeeNote, updatedBy }),
   });
-  if (!res.ok) throw new Error('Gagal memperbarui biaya');
-  const data = await res.json();
   return data.order;
 };
 
@@ -111,13 +115,11 @@ export const uploadPaymentProof = async (
   paymentMethod: string,
   paymentProofUrl?: string
 ): Promise<OrderItem> => {
-  const res = await fetch(`/api/orders/${id}/payment`, {
+  const data = await safeFetchJson<{ order: OrderItem }>(`/api/orders/${id}/payment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ paymentMethod, paymentProofUrl }),
   });
-  if (!res.ok) throw new Error('Gagal mengunggah bukti pembayaran');
-  const data = await res.json();
   return data.order;
 };
 
@@ -127,20 +129,16 @@ export const verifyPayment = async (
   note?: string,
   updatedBy?: string
 ): Promise<OrderItem> => {
-  const res = await fetch(`/api/orders/${id}/verify-payment`, {
+  const data = await safeFetchJson<{ order: OrderItem }>(`/api/orders/${id}/verify-payment`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, note, updatedBy }),
   });
-  if (!res.ok) throw new Error('Gagal memverifikasi pembayaran');
-  const data = await res.json();
   return data.order;
 };
 
 export const deleteOrder = async (id: string): Promise<boolean> => {
-  const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Gagal menghapus pesanan');
-  const data = await res.json();
+  const data = await safeFetchJson<{ success: boolean }>(`/api/orders/${id}`, { method: 'DELETE' });
   return data.success;
 };
 
@@ -148,32 +146,30 @@ export const clearOrderHistory = async (whatsapp?: string, status?: string): Pro
   const params = new URLSearchParams();
   if (whatsapp) params.append('whatsapp', whatsapp);
   if (status) params.append('status', status);
-  const res = await fetch(`/api/orders?${params.toString()}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Gagal menghapus riwayat pesanan');
-  const data = await res.json();
+  const data = await safeFetchJson<{ removedCount: number }>(`/api/orders?${params.toString()}`, { method: 'DELETE' });
   return data.removedCount;
 };
 
 export const fetchNotifications = async (whatsapp?: string): Promise<NotificationItem[]> => {
   try {
     const url = whatsapp ? `/api/notifications?whatsapp=${encodeURIComponent(whatsapp)}` : '/api/notifications';
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    return await res.json();
+    return await safeFetchJson<NotificationItem[]>(url);
   } catch (err) {
     return [];
   }
 };
 
 export const markNotificationRead = async (id: string): Promise<void> => {
-  await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+  try {
+    await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+  } catch (err) {
+    // ignore
+  }
 };
 
 export const fetchReports = async (): Promise<any> => {
   try {
-    const res = await fetch('/api/reports');
-    if (!res.ok) throw new Error('Gagal mengambil laporan');
-    return await res.json();
+    return await safeFetchJson<any>('/api/reports');
   } catch (err) {
     return null;
   }
@@ -181,9 +177,7 @@ export const fetchReports = async (): Promise<any> => {
 
 export const fetchAuditLogs = async (): Promise<AuditLogItem[]> => {
   try {
-    const res = await fetch('/api/audit-logs');
-    if (!res.ok) return [];
-    return await res.json();
+    return await safeFetchJson<AuditLogItem[]>('/api/audit-logs');
   } catch (err) {
     return [];
   }

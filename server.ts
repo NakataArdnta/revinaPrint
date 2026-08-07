@@ -275,94 +275,99 @@ app.get("/api/orders/:id", (req, res) => {
 
 // Create new order
 app.post("/api/orders", (req, res) => {
-  const {
-    customerName,
-    whatsapp,
-    email,
-    files,
-    paperType,
-    colorMode,
-    pageCount,
-    copyCount,
-    printMode,
-    orientation,
-    finishing,
-    additionalNotes,
-  } = req.body;
+  try {
+    const {
+      customerName,
+      whatsapp,
+      email,
+      files,
+      paperType,
+      colorMode,
+      pageCount,
+      copyCount,
+      printMode,
+      orientation,
+      finishing,
+      additionalNotes,
+    } = req.body || {};
 
-  if (!customerName || !whatsapp || !paperType || !colorMode || !pageCount || !copyCount) {
-    return res.status(400).json({ error: "Data pemesanan tidak lengkap" });
+    if (!customerName || !whatsapp || !paperType || !colorMode || !pageCount || !copyCount) {
+      return res.status(400).json({ error: "Data pemesanan tidak lengkap. Mohon isi Nama Pemesan, Jenis Kertas, dan Jumlah Lembar." });
+    }
+
+    const calculation = calculateOrderPrice(
+      paperType,
+      colorMode,
+      Number(pageCount),
+      Number(copyCount),
+      finishing || "NONE",
+      pricingConfig
+    );
+
+    const orderId = generateOrderId();
+    const now = new Date().toISOString();
+
+    const newOrder: OrderItem = {
+      id: orderId,
+      createdAt: now,
+      customerName,
+      whatsapp,
+      email: email || undefined,
+      files: files || [],
+      paperType,
+      colorMode,
+      pageCount: Number(pageCount),
+      copyCount: Number(copyCount),
+      printMode: printMode || "SINGLE",
+      orientation: orientation || "PORTRAIT",
+      finishing: finishing || "NONE",
+      additionalNotes: additionalNotes || "",
+      unitPrice: calculation.unitPrice,
+      subtotal: calculation.subtotal,
+      finishingFee: calculation.finishingFee,
+      customFeeAdjustment: 0,
+      grandTotal: calculation.grandTotal,
+      status: "MENUNGGU_PERSETUJUAN",
+      paymentStatus: "UNPAID",
+      estimatedCompletion: "Akan dikonfirmasi oleh Admin",
+      statusHistory: [
+        {
+          status: "MENUNGGU_PERSETUJUAN",
+          timestamp: now,
+          note: "Pesanan berhasil dikirim ke sistem Revina Print.",
+        },
+      ],
+    };
+
+    orders.unshift(newOrder);
+
+    // Notification for customer
+    notifications.unshift({
+      id: "notif-" + Date.now(),
+      orderId,
+      recipientWhatsapp: whatsapp,
+      title: "Pesanan Terkirim",
+      message: `Pesanan #${orderId} telah kami terima. Mohon tunggu persetujuan dari Admin.`,
+      type: "INFO",
+      createdAt: now,
+      read: false,
+    });
+
+    // Audit log
+    auditLogs.unshift({
+      id: "log-" + Date.now(),
+      timestamp: now,
+      actorName: customerName,
+      actorRole: "CUSTOMER",
+      action: "BUAT_PESANAN",
+      details: `Membuat pesanan baru ${orderId} (${paperType} ${colorMode}, ${pageCount} lembar x ${copyCount} copy)`,
+    });
+
+    return res.status(201).json({ success: true, order: newOrder });
+  } catch (err: any) {
+    console.error("Error creating order:", err);
+    return res.status(500).json({ error: "Terjadi kesalahan server saat memproses pesanan: " + (err.message || "Unknown error") });
   }
-
-  const calculation = calculateOrderPrice(
-    paperType,
-    colorMode,
-    pageCount,
-    copyCount,
-    finishing || "NONE",
-    pricingConfig
-  );
-
-  const orderId = generateOrderId();
-  const now = new Date().toISOString();
-
-  const newOrder: OrderItem = {
-    id: orderId,
-    createdAt: now,
-    customerName,
-    whatsapp,
-    email: email || undefined,
-    files: files || [],
-    paperType,
-    colorMode,
-    pageCount: Number(pageCount),
-    copyCount: Number(copyCount),
-    printMode: printMode || "SINGLE",
-    orientation: orientation || "PORTRAIT",
-    finishing: finishing || "NONE",
-    additionalNotes,
-    unitPrice: calculation.unitPrice,
-    subtotal: calculation.subtotal,
-    finishingFee: calculation.finishingFee,
-    customFeeAdjustment: 0,
-    grandTotal: calculation.grandTotal,
-    status: "MENUNGGU_PERSETUJUAN",
-    paymentStatus: "UNPAID",
-    estimatedCompletion: "Akan dikonfirmasi oleh Admin",
-    statusHistory: [
-      {
-        status: "MENUNGGU_PERSETUJUAN",
-        timestamp: now,
-        note: "Pesanan berhasil dikirim ke sistem Revina Print.",
-      },
-    ],
-  };
-
-  orders.unshift(newOrder);
-
-  // Notification for customer
-  notifications.unshift({
-    id: "notif-" + Date.now(),
-    orderId,
-    recipientWhatsapp: whatsapp,
-    title: "Pesanan Terkirim",
-    message: `Pesanan #${orderId} telah kami terima. Mohon tunggu persetujuan dari Admin.`,
-    type: "INFO",
-    createdAt: now,
-    read: false,
-  });
-
-  // Audit log
-  auditLogs.unshift({
-    id: "log-" + Date.now(),
-    timestamp: now,
-    actorName: customerName,
-    actorRole: "CUSTOMER",
-    action: "BUAT_PESANAN",
-    details: `Membuat pesanan baru ${orderId} (${paperType} ${colorMode}, ${pageCount} lembar x ${copyCount} copy)`,
-  });
-
-  res.status(201).json({ success: true, order: newOrder });
 });
 
 // Update order status (ACC, Tolak, Progress update)
