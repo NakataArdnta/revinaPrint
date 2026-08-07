@@ -4,7 +4,7 @@ import { UserAccount, UserRole } from '../types';
 interface AuthContextType {
   user: UserAccount | null;
   activeRoleView: 'CUSTOMER' | 'ADMIN';
-  login: (account: string, password?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, password?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, whatsapp?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   switchRoleView: (view: 'CUSTOMER' | 'ADMIN') => void;
@@ -46,63 +46,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const login = async (
-  identifier: string,
-  password?: string,
-  role: UserRole = "CUSTOMER"
-): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputAccount: identifier.trim(),
-        password: password?.trim(),
-        role,
-      }),
-    });
+    identifier: string,
+    password?: string,
+    role: UserRole = "CUSTOMER"
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputAccount: identifier.trim(),
+          password: password?.trim(),
+          role,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      return {
-        success: false,
-        error: data.error || "Username atau password salah.",
-      };
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Gagal masuk. Periksa kembali kredensial Anda.' };
+      }
+
+      setUser(data.user);
+
+      if (["SUPER_ADMIN", "ADMIN", "OPERATOR"].includes(data.user.role)) {
+        setActiveRoleView("ADMIN");
+        localStorage.setItem("revina_role_view", "ADMIN");
+      } else {
+        setActiveRoleView("CUSTOMER");
+        localStorage.setItem("revina_role_view", "CUSTOMER");
+      }
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Terjadi kesalahan koneksi ke server.' };
     }
-
-    setUser(data.user);
-
-    if (
-      ["SUPER_ADMIN", "ADMIN", "OPERATOR"].includes(data.user.role)
-    ) {
-      setActiveRoleView("ADMIN");
-      localStorage.setItem("revina_role_view", "ADMIN");
-    } else {
-      setActiveRoleView("CUSTOMER");
-      localStorage.setItem("revina_role_view", "CUSTOMER");
-    }
-
-    return {
-      success: true,
-    };
-  } catch (err) {
-    console.error(err);
-
-    return {
-      success: false,
-      error: "Terjadi kesalahan koneksi ke server.",
-    };
-  }
-};
+  };
 
   const register = async (name: string, email: string, password: string, whatsapp?: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, whatsapp }),
+        body: JSON.stringify({ username: name, email, password, whatsapp }),
       });
       const data = await res.json();
       if (!res.ok) {
